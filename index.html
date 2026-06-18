@@ -6,6 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
+    <meta name="theme-color" content="#020402" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Roulette Deck" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>The Roulette Deck</title>
     <style>
       :root {
@@ -389,6 +397,22 @@
         text-transform: uppercase;
       }
 
+      .install-tip {
+        margin-bottom: 14px;
+        border: 2px solid var(--cyan);
+        background: rgba(5, 18, 20, 0.92);
+        box-shadow: 0 0 0 2px rgba(95, 251, 255, 0.18), 0 0 18px rgba(95, 251, 255, 0.12);
+        color: var(--cyan);
+        padding: 12px 14px;
+        font-size: 0.76rem;
+        line-height: 1.5;
+        text-transform: uppercase;
+      }
+
+      .install-tip.hidden {
+        display: none;
+      }
+
       .overlay {
         position: fixed;
         inset: 0;
@@ -463,6 +487,10 @@
   </head>
   <body>
     <div class="app">
+      <section id="installTip" class="install-tip hidden">
+        For true fullscreen on iPad: tap share, then add to home screen. Launch it from the home screen icon, not inside Safari.
+      </section>
+
       <section class="topbar">
         <div>
           <div class="brand">The Roulette Deck</div>
@@ -602,7 +630,8 @@
         addDumpBtn: document.getElementById("addDumpBtn"),
         clearLockedBtn: document.getElementById("clearLockedBtn"),
         queueList: document.getElementById("queueList"),
-        victoryOverlay: document.getElementById("victoryOverlay")
+        victoryOverlay: document.getElementById("victoryOverlay"),
+        installTip: document.getElementById("installTip")
       };
 
       let state = loadState();
@@ -611,6 +640,7 @@
       let isSpinning = false;
       let dragState = null;
       let clockInterval = null;
+      const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
       function uid() {
         return Math.random().toString(36).slice(2, 10);
@@ -1018,6 +1048,7 @@
         updateStats();
         renderQueue();
         updateVictoryOverlay();
+        els.installTip.classList.toggle("hidden", isStandalone);
         const locked = getLockedActive();
         if (locked) {
           renderCard({

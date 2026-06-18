@@ -990,8 +990,8 @@
 
                 world.sprites = [
                     makeSprite(left + (width * 0.18), floorLine, "#9aa1bb", "#ff4d9d", "Knight"),
-                    makeSprite(left + (width * 0.48), floorLine, "#7843d0", "#00ffcc", "Mage"),
-                    makeSprite(left + (width * 0.78), floorLine, "#3fc9dd", "#d6ff6b", "Rogue")
+                    makeSprite(left + (width * 0.48), floorLine, "#7843d0", "#00ffcc", "Wizard"),
+                    makeSprite(left + (width * 0.78), floorLine, "#3fc9dd", "#d6ff6b", "Whelp")
                 ];
 
                 world.fish = [
@@ -1023,7 +1023,8 @@
                     frame: Math.random() * 5,
                     carriedBy: null,
                     celebrate: 0,
-                    fishing: false
+                    fishing: false,
+                    pose: "idle"
                 };
             }
 
@@ -1122,6 +1123,7 @@
                     }
 
                     if (sprite.carriedBy) {
+                        sprite.pose = "float";
                         sprite.x = sprite.carriedBy.x - 11;
                         sprite.y = sprite.carriedBy.y + 18;
                         if (sprite.carriedBy.y < 44) {
@@ -1136,14 +1138,25 @@
 
                     if (mode === "focus") {
                         sprite.fishing = index === 0 && Math.sin(Date.now() / 850) > 0.5;
+                        if (sprite.celebrate > 0) {
+                            sprite.pose = "celebrate";
+                        } else if (sprite.role === "Knight") {
+                            sprite.pose = sprite.fishing ? "fish" : "rest";
+                        } else if (sprite.role === "Wizard") {
+                            sprite.pose = "meditate";
+                        } else {
+                            sprite.pose = "curl";
+                        }
                         if (Math.random() < 0.004) {
                             sprite.targetX = Math.max(left + 26, Math.min(right - 36, sprite.x + (Math.random() * 120 - 60)));
                         }
                     } else if (mode === "escape") {
                         sprite.fishing = false;
+                        sprite.pose = sprite.role === "Knight" ? "guard" : sprite.role === "Wizard" ? "cast" : "pounce";
                         sprite.targetX = left + (width * (index === 0 ? 0.16 : index === 1 ? 0.44 : 0.74));
                     } else {
                         sprite.fishing = false;
+                        sprite.pose = sprite.role === "Knight" ? "idle" : sprite.role === "Wizard" ? "idle" : "prowl";
                         if (Math.random() < 0.0025) {
                             sprite.targetX = Math.max(left + 26, Math.min(right - 36, sprite.x + (Math.random() * 90 - 45)));
                         }
@@ -1410,114 +1423,377 @@
                         ctx.lineTo(sprite.x + (16 * scale), baseY + (12 * scale));
                         ctx.stroke();
                     }
+
+                    if (sprite.role === "Knight" && sprite.celebrate > 0) {
+                        ctx.save();
+                        ctx.strokeStyle = "rgba(255,255,255,0.86)";
+                        ctx.lineWidth = Math.max(2, scale * 0.9);
+                        ctx.beginPath();
+                        ctx.arc(sprite.x + (12 * scale), baseY - (2 * scale), 9 * scale, -0.9, 0.45);
+                        ctx.stroke();
+                        ctx.strokeStyle = "rgba(0,255,204,0.7)";
+                        ctx.lineWidth = Math.max(1, scale * 0.45);
+                        ctx.beginPath();
+                        ctx.arc(sprite.x + (12 * scale), baseY - (2 * scale), 12 * scale, -1.02, 0.6);
+                        ctx.stroke();
+                        ctx.restore();
+                    } else if (sprite.role === "Wizard" && sprite.pose === "cast") {
+                        ctx.save();
+                        ctx.strokeStyle = "rgba(146,255,245,0.85)";
+                        ctx.lineWidth = Math.max(1, scale * 0.5);
+                        ctx.beginPath();
+                        ctx.arc(sprite.x + (14 * scale), baseY - (4 * scale), 4 * scale, 0, Math.PI * 2);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(sprite.x + (14 * scale), baseY - (10 * scale));
+                        ctx.lineTo(sprite.x + (14 * scale), baseY + (2 * scale));
+                        ctx.moveTo(sprite.x + (8 * scale), baseY - (4 * scale));
+                        ctx.lineTo(sprite.x + (20 * scale), baseY - (4 * scale));
+                        ctx.stroke();
+                        ctx.restore();
+                    }
                 });
             }
 
             function drawPixelSprite(sprite, x, y, scale, mode) {
                 var frame = Math.floor(sprite.frame * 4) % 2;
                 var palettes = {
-                    Knight: { A: "#d8deef", B: "#8e95ad", C: "#ff5ca8", D: "#1a1f32", E: "#fbfdff", F: "#5d667d", G: "#f3c969", H: "#6e768d", I: "#ffd9ec" },
-                    Mage: { A: "#b694ff", B: "#6f2fe0", C: "#00ffd0", D: "#231047", E: "#f8f4ff", F: "#4b1f8b", G: "#8af7ff", H: "#ffb6ff", I: "#d6ccff" },
-                    Rogue: { A: "#86dbff", B: "#166173", C: "#d8ff74", D: "#082f49", E: "#eefdfd", F: "#0f7d74", G: "#f4c24a", H: "#13333f", I: "#9be7ff" }
+                    Knight: { A: "#ecedf5", B: "#a3acc4", C: "#ff5ca8", D: "#1a1730", E: "#fff8df", F: "#717c96", G: "#f4c567", H: "#4f5872", I: "#c33270", J: "#ffffff" },
+                    Wizard: { A: "#ccb9ff", B: "#7a48de", C: "#00ffd0", D: "#20103e", E: "#f4efff", F: "#4d2b8c", G: "#98f5ff", H: "#ffb8ee", I: "#31205f", J: "#ffffff" },
+                    Whelp: { A: "#88f1ff", B: "#3aa6c1", C: "#d8ff74", D: "#11253f", E: "#ecfeff", F: "#1f6070", G: "#7de2f4", H: "#5a2a93", I: "#0c1627", J: "#ffffff" }
                 };
                 var palette = palettes[sprite.role] || palettes.Knight;
-                var rowsByRole = {
-                    Knight: frame === 0 ? [
-                        "....CCC.....",
-                        "...CAABC....",
-                        "...AADDA....",
-                        "..AAIEIAA...",
-                        "..AHHHHHA...",
-                        "..AFGGGGFA..",
-                        ".AFBBBBBBFA.",
-                        ".AHBBBBBBHA.",
-                        "..ABBBBBBGA.",
-                        "..ABBBBBBA..",
-                        "...HBBBH....",
-                        "..HF...FH...",
-                        "..F.....F...",
-                        "...F...F...."
-                    ] : [
-                        "....CCC.....",
-                        "...CAABC....",
-                        "...AADDA....",
-                        "..AAIEIAA...",
-                        "..AHHHHHA...",
-                        "..AFGGGGFA..",
-                        ".AFBBBBBBFA.",
-                        ".AHBBBBBBHA.",
-                        "..ABBBBBBGA.",
-                        "..ABBBB.BA..",
-                        "...HBBBH....",
-                        "..HF...FH...",
-                        "..F.....F...",
-                        "...F...F...."
-                    ],
-                    Mage: frame === 0 ? [
-                        ".....C......",
-                        "....CCC.....",
-                        "...CCACC....",
-                        "...CDDDC....",
-                        "..CCAEACC...",
-                        "...AAAAA....",
-                        "..AABBBA....",
-                        "..ABBBBBA...",
-                        ".ABBBBBBBA..",
-                        ".ABBBBBFBA.G",
-                        "..ABBBBBAA.G",
-                        "...B..B...G.",
-                        "..CC..CC..G.",
-                        ".C......C..."
-                    ] : [
-                        ".....C......",
-                        "....CCC.....",
-                        "...CCACC....",
-                        "...CDDDC....",
-                        "..CCAEACC...",
-                        "...AAAAA....",
-                        "..AABBBA....",
-                        "..ABBBBBA...",
-                        ".ABBBBBBBA..",
-                        ".ABBBBBFBA.G",
-                        "..ABBBBBAA.G",
-                        "...B.B....G.",
-                        "..CC..CC..G.",
-                        ".C......C..."
-                    ],
-                    Rogue: frame === 0 ? [
-                        "....AAA.....",
-                        "...ABBEA....",
-                        "..AADDDA....",
-                        "..ADDDDH....",
-                        "..ACCCHHA...",
-                        ".ACCCCFFFA..",
-                        ".ABBCCFFFA..",
-                        ".ABBCFFFHA..",
-                        "..BBBBFH....",
-                        "..BBBHF.....",
-                        "..BBG.B.....",
-                        ".BF...FB....",
-                        ".F.....F....",
-                        "..F...F....."
-                    ] : [
-                        "....AAA.....",
-                        "...ABBEA....",
-                        "..AADDDA....",
-                        "..ADDDDH....",
-                        "..ACCCHHA...",
-                        ".ACCCCFFFA..",
-                        ".ABBCCFFFA..",
-                        ".AHFFFCCBA..",
-                        "..HBBFH.....",
-                        "..BBG.B.....",
-                        "..BF..FB....",
-                        ".F.....F....",
-                        "..F...F.....",
-                        "...F.F......"
-                    ]
+                var spriteSheets = {
+                    Knight: {
+                        idle: frame === 0 ? [
+                            "....CC.......",
+                            "...CAAC......",
+                            "...ADDA......",
+                            "..AAJEAA.....",
+                            "..AHHHHAA....",
+                            "..AFGGGFHA...",
+                            ".AFBBBBBFHA..",
+                            ".AHBBBBBBHA..",
+                            "..ABBBBBBG...",
+                            "..ABBBBBBA...",
+                            "...HBBBH.....",
+                            "..HF..GF.....",
+                            "..F....F.....",
+                            ".F......F...."
+                        ] : [
+                            "....CC.......",
+                            "...CAAC......",
+                            "...ADDA......",
+                            "..AAJEAA.....",
+                            "..AHHHHAA....",
+                            "..AFGGGFHA...",
+                            ".AFBBBBBFHA..",
+                            ".AHBBBBBBHA..",
+                            "..ABBBBBBG...",
+                            "..ABBBB.BA...",
+                            "...HBBBH.....",
+                            "..HF...GF....",
+                            ".F.....F.....",
+                            "..F...F......"
+                        ],
+                        rest: [
+                            "............",
+                            "....CC......",
+                            "...CAAC.....",
+                            "...ADDA.....",
+                            "..AAJEA.....",
+                            "..AHHHHA....",
+                            "..AFGGGFA...",
+                            ".AFBBBBBFA..",
+                            ".AHBBBBBHA..",
+                            "..ABBBBBGA..",
+                            "...HBBBHH...",
+                            "..FF....F...",
+                            ".GG.....F...",
+                            "............"
+                        ],
+                        fish: [
+                            ".....CC......",
+                            "....CAAC.....",
+                            "....ADDA.....",
+                            "...AAJEAA....",
+                            "...AHHHHA....",
+                            "..AFGGGGF....",
+                            "..ABBBBBBF...",
+                            "..ABBBBBBH...",
+                            "..ABBBBBBGGGG",
+                            "...HBBBBB...G",
+                            "...FHBBH....G",
+                            "..FF..GF.....",
+                            ".F.....F.....",
+                            "............"
+                        ],
+                        guard: [
+                            "....CC.......",
+                            "...CAAC......",
+                            "...ADDA......",
+                            "..AAJEAAC....",
+                            "..AHHHHAC....",
+                            "..AFGGGFCA...",
+                            ".AFBBBBBFCA..",
+                            ".AHBBBBBBCA..",
+                            "..ABBBBBBGA..",
+                            "..ABBBBBBAA..",
+                            "...HBBBH.DD..",
+                            "..HF..GF.DD..",
+                            "..F....F.....",
+                            ".F......F...."
+                        ],
+                        celebrate: [
+                            "...C....C....",
+                            "..CAAC.CAAC..",
+                            "..ADDA.ADDA..",
+                            ".AAJEAAAJEAA.",
+                            ".AHHHHAAHHHA.",
+                            ".AFGGGGFGGFA.",
+                            ".ABBBBBBBBBA.",
+                            ".ABBBBBBBBBA.",
+                            "..HBBBBBBBH..",
+                            "..FHBBBBHF...",
+                            ".F..HBBH..F..",
+                            "....F..F.....",
+                            "...F....F....",
+                            "............"
+                        ],
+                        float: [
+                            "....CC......",
+                            "...CAAC.....",
+                            "...ADDA.....",
+                            "..AAJEAA....",
+                            "..AHHHHAA...",
+                            "..AFGGGFHA..",
+                            ".AFBBBBBFHA.",
+                            ".AHBBBBBBHA.",
+                            "..ABBBBBBG..",
+                            "..ABBBBBBA..",
+                            "...HBBBH....",
+                            "..F.HG.F....",
+                            ".F......F...",
+                            "...F..F....."
+                        ]
+                    },
+                    Wizard: {
+                        idle: frame === 0 ? [
+                            ".....C.......",
+                            "....CCC......",
+                            "...CCACC.....",
+                            "...CDDDC.....",
+                            "..CCJEJCC....",
+                            "...AABBA.....",
+                            "..AABBBBA....",
+                            "..ABBBBBBA...",
+                            ".ABBBBBBBFA..",
+                            ".ABBBBBBBFA.G",
+                            "..ABBBBBBAA.G",
+                            "...B...B..G..",
+                            "..CC...CC.G..",
+                            ".C.......C..."
+                        ] : [
+                            ".....C.......",
+                            "....CCC......",
+                            "...CCACC.....",
+                            "...CDDDC.....",
+                            "..CCJEJCC....",
+                            "...AABBA.....",
+                            "..AABBBBA....",
+                            "..ABBBBBBA...",
+                            ".ABBBBBBBFA..",
+                            ".ABBBBBBBFA.G",
+                            "..ABBBBBBAA.G",
+                            "...B.B....G..",
+                            "..CC...CC.G..",
+                            ".C.......C..."
+                        ],
+                        meditate: [
+                            ".....C......",
+                            "....CCC.....",
+                            "...CCACC....",
+                            "...CDDDC....",
+                            "..CCJEJCC...",
+                            "...AABBA....",
+                            "..AABBBBA...",
+                            "..ABBBBBBA..",
+                            ".ABBBBBBBFA.",
+                            "..ABBBBBBA..",
+                            "...ABBBBA...",
+                            "..CC...CC...",
+                            ".G.......G..",
+                            "............"
+                        ],
+                        cast: [
+                            ".....C......",
+                            "....CCC.....",
+                            "...CCACC....",
+                            "...CDDDC....",
+                            "..CCJEJCC...",
+                            "...AABBA..G.",
+                            "..AABBBBAGGG",
+                            "..ABBBBBBGG.",
+                            ".ABBBBBBBF..",
+                            ".ABBBBBBBF..",
+                            "..ABBBBBAA..",
+                            "...B.B......",
+                            "..CC.CC.....",
+                            ".C.....C...."
+                        ],
+                        celebrate: [
+                            "..C.....C...",
+                            ".CCC...CCC..",
+                            ".CACC.CACC..",
+                            ".CDDD.CDDD..",
+                            "CCJEJCCJEJCC",
+                            "..AABBBAA....",
+                            ".ABBBBBBBA...",
+                            ".ABBBBBBBA...",
+                            "..ABBBBBBA...",
+                            "...ABBBBA....",
+                            "..G..BB..G...",
+                            ".CC......CC..",
+                            "C..........C.",
+                            "............"
+                        ],
+                        float: [
+                            ".....C......",
+                            "....CCC.....",
+                            "...CCACC....",
+                            "...CDDDC....",
+                            "..CCJEJCC...",
+                            "...AABBA....",
+                            "..AABBBBA...",
+                            "..ABBBBBBA..",
+                            ".ABBBBBBBFA.",
+                            ".ABBBBBBBA..",
+                            "..ABBBBBA...",
+                            "..C..B.C....",
+                            ".G......G...",
+                            "....CC......"
+                        ]
+                    },
+                    Whelp: {
+                        idle: frame === 0 ? [
+                            "....HH.......",
+                            "...HAAH......",
+                            "..HABBAH.....",
+                            "..ABCCBA.....",
+                            ".ABCDDDBA....",
+                            ".ABCDDDDBA...",
+                            ".ABCDDDDBA...",
+                            "..BCDFFDC....",
+                            "..BCFGGFC....",
+                            "...CFFFH.....",
+                            "..CE..EF.....",
+                            ".E......E....",
+                            "....EE.......",
+                            "............."
+                        ] : [
+                            "....HH.......",
+                            "...HAAH......",
+                            "..HABBAH.....",
+                            "..ABCCBA.....",
+                            ".ABCDDDBA....",
+                            ".ABCDDDDBA...",
+                            ".ABCDDDDBA...",
+                            "..BCDFFDC....",
+                            "..BCFGGFC....",
+                            "...CFFFH.....",
+                            "..CE.EF......",
+                            ".E.....E.....",
+                            "...E..E......",
+                            "............."
+                        ],
+                        curl: [
+                            ".............",
+                            "...HHAA......",
+                            "..HABBBA.....",
+                            "..ABCDDDA....",
+                            ".ABCDFFFDA...",
+                            ".ABCDFFFD....",
+                            "..BCFGGFC....",
+                            "...CFFFH.....",
+                            "..CEEEF......",
+                            ".E...........",
+                            ".............",
+                            ".............",
+                            ".............",
+                            "............."
+                        ],
+                        prowl: [
+                            ".....HH......",
+                            "....HAAH.....",
+                            "...HABBAH....",
+                            "..ABCCCB.....",
+                            ".ABCDDDBA....",
+                            ".ABCDDDDBA...",
+                            ".ABCDDDDBA...",
+                            "..BCDFFFDCH..",
+                            "..BCFGGGFCH..",
+                            "...CFFFFH....",
+                            "..CE...EF....",
+                            ".E......E....",
+                            "...E..E......",
+                            "............."
+                        ],
+                        pounce: [
+                            "......HH.....",
+                            ".....HAAH....",
+                            "....HABBAH...",
+                            "...ABCCCB.....",
+                            "..ABCDDDBA....",
+                            ".ABCDDDDDBA...",
+                            ".ABCDDDDDBA...",
+                            "..BCDFFFFDCH..",
+                            "..BCFGGGGFCH..",
+                            ".CCFFFFFH.....",
+                            ".E.E..EEF.....",
+                            "E........E....",
+                            "...E..E.......",
+                            ".............."
+                        ],
+                        celebrate: [
+                            "...HH..HH....",
+                            "..HAAHHAAH...",
+                            "..ABBBBBA....",
+                            ".ABCDDDDCA...",
+                            ".ABCDDDDDA...",
+                            "..BCFGGGFC....",
+                            "..BCFFFFFC....",
+                            "...CFFFFH.....",
+                            "..CEE.EEF.....",
+                            ".E.......E....",
+                            "...E...E......",
+                            "..............",
+                            "..............",
+                            ".............."
+                        ],
+                        float: [
+                            "....HH.......",
+                            "...HAAH......",
+                            "..HABBAH.....",
+                            "..ABCCBA.....",
+                            ".ABCDDDBA....",
+                            ".ABCDDDDBA...",
+                            ".ABCDDDDBA...",
+                            "..BCDFFDC....",
+                            "..BCFGGFC....",
+                            "...CFFFH.....",
+                            "..CE.EF......",
+                            ".E......E....",
+                            "...E..E......",
+                            ".....E......."
+                        ]
+                    }
                 };
-
-                var rows = rowsByRole[sprite.role] || rowsByRole.Knight;
+                var roleSheet = spriteSheets[sprite.role] || spriteSheets.Knight;
+                var poseKey = roleSheet[sprite.pose] ? sprite.pose : "idle";
+                var rows = roleSheet[poseKey];
+                var sheetWidth = rows.reduce(function (max, rowText) {
+                    return Math.max(max, rowText.length);
+                }, 0);
                 ctx.fillStyle = "rgba(0,0,0,0.26)";
                 ctx.fillRect(x + scale, y + (rows.length * scale), 6 * scale, scale);
                 for (var row = 0; row < rows.length; row += 1) {
@@ -1532,7 +1808,7 @@
                 }
 
                 ctx.strokeStyle = "rgba(255,255,255,0.12)";
-                ctx.strokeRect(x - 0.5, y - 0.5, rows[0].length * scale + 1, rows.length * scale + 1);
+                ctx.strokeRect(x - 0.5, y - 0.5, sheetWidth * scale + 1, rows.length * scale + 1);
 
                 if (mode === "escape") {
                     ctx.fillStyle = "rgba(255,0,127,0.35)";
@@ -1543,27 +1819,6 @@
                     ctx.fillRect(x + (3 * scale), y - scale, 2 * scale, scale);
                     ctx.fillStyle = "rgba(0,255,204,0.7)";
                     ctx.fillRect(x + (5 * scale), y - scale, scale, scale);
-                }
-
-                if (sprite.role === "Knight") {
-                    ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + (11 * scale), y + (6 * scale), scale, 5 * scale);
-                    ctx.fillStyle = palette.C;
-                    ctx.fillRect(x + (4 * scale), y + scale, scale, 2 * scale);
-                } else if (sprite.role === "Mage") {
-                    ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + (12 * scale), y + (8 * scale), scale, 5 * scale);
-                    ctx.fillStyle = palette.H;
-                    ctx.fillRect(x + (11 * scale), y + (7 * scale), 3 * scale, scale);
-                    ctx.fillStyle = palette.C;
-                    ctx.fillRect(x + (12 * scale), y + (6 * scale), scale, scale);
-                } else if (sprite.role === "Rogue") {
-                    ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + (2 * scale), y + (8 * scale), scale, 4 * scale);
-                    ctx.fillStyle = palette.H;
-                    ctx.fillRect(x + (8 * scale), y + (3 * scale), 2 * scale, 6 * scale);
-                    ctx.fillStyle = palette.C;
-                    ctx.fillRect(x + (4 * scale), y + (4 * scale), 2 * scale, scale);
                 }
             }
 
@@ -1587,31 +1842,38 @@
                     var scale = Math.max(2, Math.round(width / 200));
                     var bob = Math.round(Math.sin((Date.now() / 55) + slime.wobble) * scale);
                     var slimeRows = index % 2 === 0 ? [
-                        "...AAA...",
-                        "..ABBA...",
-                        ".ABBCCBA.",
-                        "ABCCCCCCB",
-                        "ABCCDDCCB",
-                        ".BCCCCCC.",
-                        "..BBBBB.."
+                        "....AA.....",
+                        "...ABBA....",
+                        "..ABCCCBA..",
+                        ".ABCCCCCCA.",
+                        ".ABCDDDDCA.",
+                        "ABCDDDDDFCA",
+                        "ABCDDDDDFCA",
+                        ".BCCCCCCCC.",
+                        "..BBC..CBB.",
+                        "...B....B.."
                     ] : [
-                        "...AAA...",
-                        "..ABBA...",
-                        ".ABCCCB..",
-                        "ABCCCCCCB",
-                        "ABCDDDCCB",
-                        ".BCCCCCB.",
-                        "..BBBBB.."
+                        "....AA.....",
+                        "...ABBA....",
+                        "..ABCCCBA..",
+                        ".ABCCCCCCA.",
+                        ".ABCDDDDCA.",
+                        "ABCDDDDDCCA",
+                        "ABCDDDDDDCA",
+                        ".BCCCCCCCC.",
+                        "..BBC..CBB.",
+                        "...B....B.."
                     ];
 
                     var palette = {
-                        A: "#ff7abf",
+                        A: "#ff8ac6",
                         B: "#ff2d8f",
-                        C: "#d30f6d",
-                        D: "#ffffff"
+                        C: "#d31267",
+                        D: "#ffebff",
+                        F: "#7a0639"
                     };
                     var startX = Math.round(liveX - ((slimeRows[0].length * scale) / 2));
-                    var startY = Math.round(floorLine - (7 * scale) + bob);
+                    var startY = Math.round(floorLine - (10 * scale) + bob);
 
                     ctx.fillStyle = "rgba(0,0,0,0.26)";
                     ctx.fillRect(startX + scale, startY + (slimeRows.length * scale), 6 * scale, scale);
@@ -1625,9 +1887,11 @@
                             ctx.fillRect(startX + (col * scale), startY + (row * scale), scale, scale);
                         }
                     }
+                    ctx.fillStyle = "rgba(255,255,255,0.4)";
+                    ctx.fillRect(startX + (3 * scale), startY + (2 * scale), 2 * scale, scale);
                     ctx.fillStyle = "#2c0018";
-                    ctx.fillRect(startX + (2 * scale), startY + (3 * scale), scale, scale);
-                    ctx.fillRect(startX + (5 * scale), startY + (3 * scale), scale, scale);
+                    ctx.fillRect(startX + (3 * scale), startY + (4 * scale), scale, scale);
+                    ctx.fillRect(startX + (7 * scale), startY + (4 * scale), scale, scale);
                 });
 
                 ctx.fillStyle = "#ff8bc9";

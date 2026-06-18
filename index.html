@@ -155,7 +155,7 @@
         .main-grid {
             min-height: 0;
             display: grid;
-            grid-template-columns: 1.4fr 0.9fr;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.82fr);
             align-items: stretch;
             gap: 12px;
         }
@@ -164,6 +164,8 @@
             position: relative;
             overflow: hidden;
             min-height: 420px;
+            aspect-ratio: 4 / 3;
+            align-self: start;
             background:
                 radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.04), transparent 30%),
                 linear-gradient(180deg, rgba(18, 8, 42, 0.94), rgba(4, 1, 10, 0.98));
@@ -421,6 +423,7 @@
 
             .viewport {
                 min-height: 46vh;
+                aspect-ratio: auto;
             }
 
             .terminal {
@@ -581,6 +584,7 @@
             };
 
             var world = {
+                scene: null,
                 sprites: [],
                 fish: [],
                 bubbles: [],
@@ -942,24 +946,58 @@
                 canvas.width = Math.floor(rect.width * pixelRatio);
                 canvas.height = Math.floor(rect.height * pixelRatio);
                 ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                world.scene = getSceneMetrics();
                 buildWorld();
             }
 
+            function getSceneMetrics() {
+                var fullWidth = canvas.width / pixelRatio;
+                var fullHeight = canvas.height / pixelRatio;
+                var aspect = 4 / 3;
+                var width = fullWidth;
+                var height = fullHeight;
+                var x = 0;
+                var y = 0;
+
+                if (fullWidth / fullHeight > aspect) {
+                    height = fullHeight;
+                    width = height * aspect;
+                    x = (fullWidth - width) / 2;
+                } else {
+                    width = fullWidth;
+                    height = width / aspect;
+                    y = (fullHeight - height) / 2;
+                }
+
+                return {
+                    fullWidth: fullWidth,
+                    fullHeight: fullHeight,
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
+                    floorLine: y + (height * 0.72)
+                };
+            }
+
             function buildWorld() {
-                var width = canvas.width / pixelRatio;
-                var height = canvas.height / pixelRatio;
-                var floorLine = height * 0.72;
+                var scene = world.scene || getSceneMetrics();
+                var width = scene.width;
+                var height = scene.height;
+                var floorLine = scene.floorLine;
+                var left = scene.x;
+                var top = scene.y;
 
                 world.sprites = [
-                    makeSprite(width * 0.18, floorLine, "#9aa1bb", "#ff4d9d", "Knight"),
-                    makeSprite(width * 0.48, floorLine, "#7843d0", "#00ffcc", "Mage"),
-                    makeSprite(width * 0.78, floorLine, "#f58bc2", "#7dd3fc", "Scout")
+                    makeSprite(left + (width * 0.18), floorLine, "#9aa1bb", "#ff4d9d", "Knight"),
+                    makeSprite(left + (width * 0.48), floorLine, "#7843d0", "#00ffcc", "Mage"),
+                    makeSprite(left + (width * 0.78), floorLine, "#3fc9dd", "#d6ff6b", "Rogue")
                 ];
 
                 world.fish = [
-                    makeFish(90, height * 0.45, 1.0, 0.15, 24, 188),
-                    makeFish(width - 160, height * 0.54, -0.8, -0.18, 30, 42),
-                    makeFish(width * 0.52, height * 0.62, 0.65, 0.12, 20, 315)
+                    makeFish(left + 90, top + (height * 0.45), 1.0, 0.15, 24, 188),
+                    makeFish(left + width - 160, top + (height * 0.54), -0.8, -0.18, 30, 42),
+                    makeFish(left + (width * 0.52), top + (height * 0.62), 0.65, 0.12, 20, 315)
                 ];
 
                 world.bubbles = [];
@@ -968,8 +1006,8 @@
                 }
 
                 world.slimes = [
-                    { x: width * 0.2, wobble: 0, pace: 1.1 },
-                    { x: width * 0.72, wobble: 1.6, pace: 0.8 }
+                    { x: left + (width * 0.2), wobble: 0, pace: 1.1 },
+                    { x: left + (width * 0.72), wobble: 1.6, pace: 0.8 }
                 ];
             }
 
@@ -1001,11 +1039,10 @@
             }
 
             function spawnBubble(randomY) {
-                var width = canvas.width / pixelRatio;
-                var height = canvas.height / pixelRatio;
+                var scene = world.scene || getSceneMetrics();
                 world.bubbles.push({
-                    x: Math.random() * width,
-                    y: randomY ? Math.random() * height : height + 16,
+                    x: scene.x + (Math.random() * scene.width),
+                    y: randomY ? scene.y + (Math.random() * scene.height) : scene.y + scene.height + 16,
                     radius: Math.random() * 12 + 6,
                     speed: Math.random() * 1.2 + 0.55,
                     wave: Math.random() * 6.28,
@@ -1029,26 +1066,29 @@
             }
 
             function triggerTinyBurst(color) {
-                var width = canvas.width / pixelRatio;
-                var height = canvas.height / pixelRatio;
-                emitSparkBurst(width * 0.86, height * 0.1, 10, color);
+                var scene = world.scene || getSceneMetrics();
+                emitSparkBurst(scene.x + (scene.width * 0.86), scene.y + (scene.height * 0.1), 10, color);
                 synth(color === "#8dffce" ? 620 : 240, "square", 0.08, 0.04);
             }
 
             function updateWorld(dt) {
-                var width = canvas.width / pixelRatio;
-                var height = canvas.height / pixelRatio;
-                var floorLine = height * 0.72;
+                var scene = world.scene || getSceneMetrics();
+                var width = scene.width;
+                var height = scene.height;
+                var floorLine = scene.floorLine;
                 var mode = getWorldMode();
+                var left = scene.x;
+                var right = scene.x + scene.width;
+                var top = scene.y;
 
                 cleanseFlash *= 0.965;
 
                 world.fish.forEach(function (fish) {
                     fish.x += fish.dx * dt * 0.06;
                     fish.y += fish.dy * dt * 0.06 + Math.sin((Date.now() / 500) + fish.x * 0.02) * 0.08;
-                    if (fish.x > width + 50) { fish.x = -50; }
-                    if (fish.x < -50) { fish.x = width + 50; }
-                    if (fish.y < height * 0.34 || fish.y > floorLine - 22) { fish.dy *= -1; }
+                    if (fish.x > right + 50) { fish.x = left - 50; }
+                    if (fish.x < left - 50) { fish.x = right + 50; }
+                    if (fish.y < top + (height * 0.34) || fish.y > floorLine - 22) { fish.dy *= -1; }
                 });
 
                 world.bubbles.forEach(function (bubble, index) {
@@ -1097,15 +1137,15 @@
                     if (mode === "focus") {
                         sprite.fishing = index === 0 && Math.sin(Date.now() / 850) > 0.5;
                         if (Math.random() < 0.004) {
-                            sprite.targetX = Math.max(26, Math.min(width - 36, sprite.x + (Math.random() * 120 - 60)));
+                            sprite.targetX = Math.max(left + 26, Math.min(right - 36, sprite.x + (Math.random() * 120 - 60)));
                         }
                     } else if (mode === "escape") {
                         sprite.fishing = false;
-                        sprite.targetX = width * (index === 0 ? 0.16 : index === 1 ? 0.44 : 0.74);
+                        sprite.targetX = left + (width * (index === 0 ? 0.16 : index === 1 ? 0.44 : 0.74));
                     } else {
                         sprite.fishing = false;
                         if (Math.random() < 0.0025) {
-                            sprite.targetX = Math.max(26, Math.min(width - 36, sprite.x + (Math.random() * 90 - 45)));
+                            sprite.targetX = Math.max(left + 26, Math.min(right - 36, sprite.x + (Math.random() * 90 - 45)));
                         }
                     }
 
@@ -1124,13 +1164,15 @@
             }
 
             function renderWorld() {
-                var width = canvas.width / pixelRatio;
-                var height = canvas.height / pixelRatio;
-                var floorLine = height * 0.72;
+                var scene = world.scene || getSceneMetrics();
+                var width = scene.width;
+                var height = scene.height;
                 var mode = getWorldMode();
                 var progress = getProgress();
+                var fullWidth = scene.fullWidth;
+                var fullHeight = scene.fullHeight;
 
-                var gradient = ctx.createLinearGradient(0, 0, 0, height);
+                var gradient = ctx.createLinearGradient(0, 0, 0, fullHeight);
                 if (mode === "escape") {
                     gradient.addColorStop(0, "#26051d");
                     gradient.addColorStop(0.55, "#120112");
@@ -1145,44 +1187,56 @@
                     gradient.addColorStop(1, "#04010a");
                 }
                 ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
+                ctx.fillRect(0, 0, fullWidth, fullHeight);
 
-                drawCrystalField(width, height, floorLine, mode);
-                drawWater(width, height, floorLine, mode, progress.ratio);
-                drawPlatforms(width, height, floorLine, mode);
+                if (scene.x > 0 || scene.y > 0) {
+                    ctx.fillStyle = "rgba(0,0,0,0.22)";
+                    if (scene.x > 0) {
+                        ctx.fillRect(0, 0, scene.x, fullHeight);
+                        ctx.fillRect(scene.x + scene.width, 0, fullWidth - (scene.x + scene.width), fullHeight);
+                    }
+                    if (scene.y > 0) {
+                        ctx.fillRect(0, 0, fullWidth, scene.y);
+                        ctx.fillRect(0, scene.y + scene.height, fullWidth, fullHeight - (scene.y + scene.height));
+                    }
+                }
+
+                drawCrystalField(scene.width, scene.height, scene.floorLine, mode, scene.x, scene.y);
+                drawWater(scene.width, scene.height, scene.floorLine, mode, progress.ratio, scene.x, scene.y);
+                drawPlatforms(scene.width, scene.height, scene.floorLine, mode, scene.x, scene.y);
                 drawFish(mode);
-                drawCampfire(width, floorLine, mode);
+                drawCampfire(scene.width, scene.floorLine, mode, scene.x);
                 drawBubbles(mode);
-                drawSprites(mode);
+                drawSprites(mode, scene.width);
                 drawParticles();
-                drawSlimes(width, floorLine, mode);
+                drawSlimes(scene.width, scene.floorLine, mode, scene.x);
 
                 if (cleanseFlash > 0.02) {
                     ctx.save();
                     ctx.globalAlpha = cleanseFlash * 0.18;
                     ctx.fillStyle = "#b8fff3";
-                    ctx.fillRect(0, 0, width, height);
+                    ctx.fillRect(scene.x, scene.y, scene.width, scene.height);
                     ctx.restore();
                 }
             }
 
-            function drawCrystalField(width, height, floorLine, mode) {
+            function drawCrystalField(width, height, floorLine, mode, left, top) {
                 ctx.save();
                 ctx.fillStyle = mode === "escape" ? "rgba(255, 0, 127, 0.12)" : "rgba(157, 78, 221, 0.18)";
                 ctx.beginPath();
-                ctx.moveTo(0, floorLine);
-                ctx.lineTo(width * 0.16, height * 0.24);
-                ctx.lineTo(width * 0.33, floorLine - 52);
-                ctx.lineTo(width * 0.54, height * 0.18);
-                ctx.lineTo(width * 0.73, floorLine - 64);
-                ctx.lineTo(width * 0.91, height * 0.22);
-                ctx.lineTo(width, floorLine);
+                ctx.moveTo(left, floorLine);
+                ctx.lineTo(left + (width * 0.16), top + (height * 0.24));
+                ctx.lineTo(left + (width * 0.33), floorLine - 52);
+                ctx.lineTo(left + (width * 0.54), top + (height * 0.18));
+                ctx.lineTo(left + (width * 0.73), floorLine - 64);
+                ctx.lineTo(left + (width * 0.91), top + (height * 0.22));
+                ctx.lineTo(left + width, floorLine);
                 ctx.closePath();
                 ctx.fill();
 
                 for (var i = 0; i < 8; i += 1) {
-                    var baseX = width * (0.08 + (i * 0.11));
-                    var topY = height * (0.11 + ((i % 3) * 0.05));
+                    var baseX = left + (width * (0.08 + (i * 0.11)));
+                    var topY = top + (height * (0.11 + ((i % 3) * 0.05)));
                     ctx.fillStyle = mode === "escape" ? "rgba(255, 60, 150, 0.28)" : "rgba(0, 255, 204, 0.12)";
                     ctx.beginPath();
                     ctx.moveTo(baseX, topY);
@@ -1195,9 +1249,9 @@
                 ctx.restore();
             }
 
-            function drawWater(width, height, floorLine, mode, ratio) {
+            function drawWater(width, height, floorLine, mode, ratio, left, top) {
                 var waterTop = floorLine + 6;
-                var waterGradient = ctx.createLinearGradient(0, waterTop, 0, height);
+                var waterGradient = ctx.createLinearGradient(0, waterTop, 0, top + height);
                 if (mode === "focus") {
                     waterGradient.addColorStop(0, "rgba(109, 236, 255, 0.40)");
                     waterGradient.addColorStop(1, "rgba(0, 135, 185, 0.46)");
@@ -1209,7 +1263,7 @@
                     waterGradient.addColorStop(1, "rgba(20, 63, 118, 0.46)");
                 }
                 ctx.fillStyle = waterGradient;
-                ctx.fillRect(0, waterTop, width, height - waterTop);
+                ctx.fillRect(left, waterTop, width, (top + height) - waterTop);
 
                 ctx.strokeStyle = mode === "escape" ? "#ff007f" : "#84faff";
                 ctx.lineWidth = 2.5;
@@ -1218,28 +1272,28 @@
                     var wave = Math.sin((x * 0.03) + (Date.now() / 460)) * (5 + ratio * 4);
                     var y = waterTop + wave;
                     if (x === 0) {
-                        ctx.moveTo(x, y);
+                        ctx.moveTo(left + x, y);
                     } else {
-                        ctx.lineTo(x, y);
+                        ctx.lineTo(left + x, y);
                     }
                 }
                 ctx.stroke();
             }
 
-            function drawPlatforms(width, height, floorLine, mode) {
+            function drawPlatforms(width, height, floorLine, mode, left, top) {
                 ctx.strokeStyle = mode === "escape" ? "#ff007f" : "#00ffcc";
                 ctx.lineWidth = 5;
                 ctx.beginPath();
-                ctx.moveTo(0, floorLine);
-                ctx.lineTo(width, floorLine);
+                ctx.moveTo(left, floorLine);
+                ctx.lineTo(left + width, floorLine);
                 ctx.stroke();
 
                 ctx.strokeStyle = mode === "escape" ? "rgba(255, 0, 127, 0.18)" : "rgba(0, 255, 204, 0.14)";
                 ctx.lineWidth = 2;
                 for (var x = 0; x < width; x += 34) {
                     ctx.beginPath();
-                    ctx.moveTo(x, floorLine);
-                    ctx.lineTo(x - 20, height);
+                    ctx.moveTo(left + x, floorLine);
+                    ctx.lineTo(left + x - 20, top + height);
                     ctx.stroke();
                 }
             }
@@ -1277,11 +1331,11 @@
                 });
             }
 
-            function drawCampfire(width, floorLine, mode) {
+            function drawCampfire(width, floorLine, mode, left) {
                 if (mode !== "focus") {
                     return;
                 }
-                var x = width * 0.58;
+                var x = left + (width * 0.58);
                 var y = floorLine - 8;
                 ctx.save();
                 ctx.fillStyle = "#533317";
@@ -1340,28 +1394,137 @@
                 });
             }
 
-            function drawSprites(mode) {
+            function drawSprites(mode, sceneWidth) {
                 world.sprites.forEach(function (sprite) {
                     var bounce = Math.abs(Math.sin(sprite.frame)) * (sprite.celebrate > 0 ? 8 : 4);
                     var baseY = sprite.y - bounce;
-                    ctx.fillStyle = sprite.color;
-                    ctx.fillRect(sprite.x, baseY - 30, 22, 30);
-                    ctx.fillStyle = "rgba(0,0,0,0.24)";
-                    ctx.fillRect(sprite.x, baseY - 14, 8, 14);
-                    ctx.fillRect(sprite.x + 14, baseY - 30, 8, 8);
-                    ctx.fillStyle = sprite.accent;
-                    ctx.fillRect(sprite.x + 8, baseY - 22, 10, 5);
+                    var scale = Math.max(2, Math.round(sceneWidth / 180));
+                    drawPixelSprite(sprite, sprite.x, baseY - (12 * scale), scale, mode);
 
                     if (sprite.fishing && mode === "focus") {
                         ctx.strokeStyle = "#e5fcff";
                         ctx.lineWidth = 1;
                         ctx.beginPath();
-                        ctx.moveTo(sprite.x + 20, baseY - 18);
-                        ctx.lineTo(sprite.x + 36, baseY + 8);
-                        ctx.lineTo(sprite.x + 32, baseY + 40);
+                        ctx.moveTo(sprite.x + (11 * scale), baseY - (7 * scale));
+                        ctx.lineTo(sprite.x + (17 * scale), baseY + (2 * scale));
+                        ctx.lineTo(sprite.x + (16 * scale), baseY + (12 * scale));
                         ctx.stroke();
                     }
                 });
+            }
+
+            function drawPixelSprite(sprite, x, y, scale, mode) {
+                var frame = Math.floor(sprite.frame * 4) % 2;
+                var palettes = {
+                    Knight: { A: "#d7dbe8", B: "#9298ae", C: "#ff4d9d", D: "#1f2338", E: "#f9fbff", F: "#6b728a" },
+                    Mage: { A: "#a78bfa", B: "#6d28d9", C: "#00ffcc", D: "#241046", E: "#f5f3ff", F: "#4c1d95" },
+                    Rogue: { A: "#7dd3fc", B: "#155e75", C: "#d6ff6b", D: "#082f49", E: "#f0fdfa", F: "#0f766e" }
+                };
+                var palette = palettes[sprite.role] || palettes.Knight;
+                var rowsByRole = {
+                    Knight: frame === 0 ? [
+                        "..AAA...",
+                        ".ABBEA..",
+                        ".ADDEA..",
+                        "..AAA...",
+                        ".AFCCFA.",
+                        ".AABBFA.",
+                        ".AABBFA.",
+                        "..B..B..",
+                        ".B....B.",
+                        "B......B",
+                        "..B..B..",
+                        ".F....F."
+                    ] : [
+                        "..AAA...",
+                        ".ABBEA..",
+                        ".ADDEA..",
+                        "..AAA...",
+                        ".AFCCFA.",
+                        ".AABFFA.",
+                        ".AABBFA.",
+                        "..BB.B..",
+                        ".B....B.",
+                        "B......B",
+                        "..B..B..",
+                        ".F....F."
+                    ],
+                    Mage: frame === 0 ? [
+                        "..CCC...",
+                        ".CAAEA..",
+                        ".CDDDA..",
+                        "..AAA...",
+                        "..ABA...",
+                        ".AABBBA.",
+                        ".ABBFBBA",
+                        "..B..B..",
+                        ".B....B.",
+                        "B......B",
+                        "...CC...",
+                        "..C..C.."
+                    ] : [
+                        "..CCC...",
+                        ".CAAEA..",
+                        ".CDDDA..",
+                        "..AAA...",
+                        "..ABA...",
+                        ".AABBBA.",
+                        ".ABBFBBA",
+                        "..B..BC.",
+                        ".B....C.",
+                        "B......C",
+                        "...CC...",
+                        "..C..C.."
+                    ],
+                    Rogue: frame === 0 ? [
+                        "..AAA...",
+                        ".ABEEA..",
+                        ".ADDEA..",
+                        "..AAA...",
+                        ".AACCFA.",
+                        ".AABBFA.",
+                        ".ABBFFA.",
+                        "..B..B..",
+                        ".B....B.",
+                        "B......B",
+                        "..C..C..",
+                        ".F....F."
+                    ] : [
+                        "..AAA...",
+                        ".ABEEA..",
+                        ".ADDEA..",
+                        "..AAA...",
+                        ".AACCFA.",
+                        ".AABBFA.",
+                        ".ABFFBA.",
+                        "..B.BB..",
+                        ".B....B.",
+                        "B......B",
+                        "..C..C..",
+                        ".F....F."
+                    ]
+                };
+
+                var rows = rowsByRole[sprite.role] || rowsByRole.Knight;
+                for (var row = 0; row < rows.length; row += 1) {
+                    for (var col = 0; col < rows[row].length; col += 1) {
+                        var code = rows[row].charAt(col);
+                        if (code === ".") {
+                            continue;
+                        }
+                        ctx.fillStyle = palette[code] || sprite.color;
+                        ctx.fillRect(x + (col * scale), y + (row * scale), scale, scale);
+                    }
+                }
+
+                if (mode === "escape") {
+                    ctx.fillStyle = "rgba(255,0,127,0.35)";
+                    ctx.fillRect(x + (2 * scale), y + (2 * scale), 4 * scale, scale);
+                }
+                if (sprite.celebrate > 0) {
+                    ctx.fillStyle = "rgba(255,255,255,0.55)";
+                    ctx.fillRect(x + (3 * scale), y - scale, 2 * scale, scale);
+                }
             }
 
             function drawParticles() {
@@ -1374,13 +1537,13 @@
                 });
             }
 
-            function drawSlimes(width, floorLine, mode) {
+            function drawSlimes(width, floorLine, mode, left) {
                 if (mode !== "escape") {
                     return;
                 }
 
                 world.slimes.forEach(function (slime, index) {
-                    var liveX = width * (0.24 + index * 0.34) + Math.sin((Date.now() / 220) + slime.wobble) * 30;
+                    var liveX = left + (width * (0.24 + index * 0.34)) + Math.sin((Date.now() / 220) + slime.wobble) * 30;
                     var wobble = Math.sin((Date.now() / 55) + slime.wobble) * 4;
                     ctx.fillStyle = "rgba(255, 0, 127, 0.88)";
                     ctx.beginPath();
@@ -1394,7 +1557,7 @@
 
                 ctx.fillStyle = "#ff8bc9";
                 ctx.font = "bold 12px Courier New";
-                ctx.fillText("[!] GLITCH SLIMES ACTIVE // STAGNATION DETECTED", 18, floorLine - 110);
+                ctx.fillText("[!] GLITCH SLIMES ACTIVE // STAGNATION DETECTED", left + 18, floorLine - 110);
             }
 
             function loop(ts) {

@@ -1,12 +1,12 @@
 {
   "name": "The Roulette Deck",
   "short_name": "Roulette Deck",
-  "description": "Brutalist arcade chaos sorter for iPad-sized screens.",
+  "description": "Living digital terrarium dashboard for an iPad Mini wall mount.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#020402",
-  "theme_color": "#020402",
+  "background_color": "#080313",
+  "theme_color": "#080313",
   "orientation": "portrait",
   "icons": [
     {

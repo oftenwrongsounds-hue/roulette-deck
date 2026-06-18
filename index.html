@@ -1416,98 +1416,104 @@
             function drawPixelSprite(sprite, x, y, scale, mode) {
                 var frame = Math.floor(sprite.frame * 4) % 2;
                 var palettes = {
-                    Knight: { A: "#d8deef", B: "#8e95ad", C: "#ff5ca8", D: "#1a1f32", E: "#fbfdff", F: "#5d667d", G: "#f3c969", H: "#a72663" },
-                    Mage: { A: "#b694ff", B: "#6f2fe0", C: "#00ffd0", D: "#231047", E: "#f8f4ff", F: "#4b1f8b", G: "#8af7ff", H: "#ffb6ff" },
-                    Rogue: { A: "#86dbff", B: "#166173", C: "#d8ff74", D: "#082f49", E: "#eefdfd", F: "#0f7d74", G: "#f4c24a", H: "#13333f" }
+                    Knight: { A: "#d8deef", B: "#8e95ad", C: "#ff5ca8", D: "#1a1f32", E: "#fbfdff", F: "#5d667d", G: "#f3c969", H: "#6e768d", I: "#ffd9ec" },
+                    Mage: { A: "#b694ff", B: "#6f2fe0", C: "#00ffd0", D: "#231047", E: "#f8f4ff", F: "#4b1f8b", G: "#8af7ff", H: "#ffb6ff", I: "#d6ccff" },
+                    Rogue: { A: "#86dbff", B: "#166173", C: "#d8ff74", D: "#082f49", E: "#eefdfd", F: "#0f7d74", G: "#f4c24a", H: "#13333f", I: "#9be7ff" }
                 };
                 var palette = palettes[sprite.role] || palettes.Knight;
                 var rowsByRole = {
                     Knight: frame === 0 ? [
-                        "...AA....",
-                        "..ABEA...",
-                        "..ADDA...",
-                        "..ABEA...",
-                        "...AA....",
-                        "..AFGFA..",
-                        "..ABCBFA.",
-                        ".ABBHBFA.",
-                        "..ABBBFA.",
-                        "..BF.BB..",
-                        ".BF...FB.",
-                        ".B.....B.",
-                        "..F...F.."
+                        "...CCC.....",
+                        "..CAABC....",
+                        "..AADDA....",
+                        "..AIEIA....",
+                        "..AHHHA....",
+                        "..AFGGFA...",
+                        ".AFBBBBFA..",
+                        ".AHBBBBHGA.",
+                        "..ABBBBBA..",
+                        "..AB.BBBA..",
+                        ".AHF..FHAA.",
+                        ".BH....FH..",
+                        "..H....H...",
+                        ".F......F.."
                     ] : [
-                        "...AA....",
-                        "..ABEA...",
-                        "..ADDA...",
-                        "..ABEA...",
-                        "...AA....",
-                        "..AFGFA..",
-                        "..ABCBFA.",
-                        ".ABBHBFA.",
-                        "..ABBBFA.",
-                        "..BB.FB..",
-                        ".BF...FB.",
-                        ".B.....B.",
-                        "..F...F.."
+                        "...CCC.....",
+                        "..CAABC....",
+                        "..AADDA....",
+                        "..AIEIA....",
+                        "..AHHHA....",
+                        "..AFGGFA...",
+                        ".AFBBBBFA..",
+                        ".AHBBBBHGA.",
+                        "..ABBBBBA..",
+                        "..ABB.BBA..",
+                        ".AHF..FHAA.",
+                        ".BH....FH..",
+                        "..H....H...",
+                        ".F......F.."
                     ],
                     Mage: frame === 0 ? [
-                        "...CC....",
-                        "..CAEC...",
-                        "..CDDD...",
-                        "..CAAC...",
-                        "...AA....",
-                        "..ABHA...",
-                        "..ABBBA..",
-                        ".ABBFBBA.",
-                        ".ABBBFBA.",
-                        "..B..BG..",
-                        ".B....G..",
-                        ".C...C...",
-                        "C.....C.."
+                        "....C......",
+                        "...CCC.....",
+                        "..CCACC....",
+                        "..CDDDC....",
+                        "..CAEAC....",
+                        "...AAA.....",
+                        "..AABAA....",
+                        "..ABBBA....",
+                        ".ABBFBBA.G.",
+                        ".ABBBFBA.G.",
+                        "..BBBFBA.G.",
+                        "..B...B.G..",
+                        ".C.....CG..",
+                        "C.......C.."
                     ] : [
-                        "...CC....",
-                        "..CAEC...",
-                        "..CDDD...",
-                        "..CAAC...",
-                        "...AA....",
-                        "..ABHA...",
-                        "..ABBBA..",
-                        ".ABBFBBA.",
-                        ".ABBBFBA.",
-                        "..B..BG..",
-                        ".B....G..",
-                        "..C..C...",
-                        ".C....C.."
+                        "....C......",
+                        "...CCC.....",
+                        "..CCACC....",
+                        "..CDDDC....",
+                        "..CAEAC....",
+                        "...AAA.....",
+                        "..AABAA....",
+                        "..ABBBA....",
+                        ".ABBFBBA.G.",
+                        ".ABBBFBA.G.",
+                        "..BBBFBA.G.",
+                        "..B..B..G..",
+                        "..C..C..G..",
+                        ".C....C...."
                     ],
                     Rogue: frame === 0 ? [
-                        "...AA....",
-                        "..ABEA...",
-                        "..ADDA...",
-                        "...AA....",
-                        "..ACHFA..",
-                        ".AACCFFA.",
-                        ".ABBFFFA.",
-                        "..ABBF...",
-                        ".BB..FB..",
-                        ".B....B..",
-                        "B..G..B..",
-                        ".F....F..",
-                        "..F..F..."
+                        "....AA.....",
+                        "...ABEA....",
+                        "..AADDA....",
+                        "..ADDDH....",
+                        "...ACCHA...",
+                        "..ACCCFFA..",
+                        ".ABBCFFFA..",
+                        ".ABBCFFH...",
+                        "..BBBFH....",
+                        ".BB..FB....",
+                        ".B..G.B....",
+                        "B..G..B....",
+                        ".F....F....",
+                        "..F..F....."
                     ] : [
-                        "...AA....",
-                        "..ABEA...",
-                        "..ADDA...",
-                        "...AA....",
-                        "..ACHFA..",
-                        ".AACCFFA.",
-                        ".ABBFFFA.",
-                        "..AFBB...",
-                        ".BB..FB..",
-                        ".B....B..",
-                        "B..G..B..",
-                        ".F....F..",
-                        "..F..F..."
+                        "....AA.....",
+                        "...ABEA....",
+                        "..AADDA....",
+                        "..ADDDH....",
+                        "...ACCHA...",
+                        "..ACCCFFA..",
+                        ".ABBCFFFA..",
+                        ".AHFFCBB...",
+                        "..HBFBB....",
+                        ".BB..FB....",
+                        ".B..G.B....",
+                        "B..G..B....",
+                        ".F....F....",
+                        "..F..F....."
                     ]
                 };
 
@@ -1541,17 +1547,23 @@
 
                 if (sprite.role === "Knight") {
                     ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + (8 * scale), y + (6 * scale), scale, 4 * scale);
+                    ctx.fillRect(x + (10 * scale), y + (6 * scale), scale, 5 * scale);
+                    ctx.fillStyle = palette.C;
+                    ctx.fillRect(x + (3 * scale), y + scale, scale, 2 * scale);
                 } else if (sprite.role === "Mage") {
                     ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + (8 * scale), y + (7 * scale), scale, 4 * scale);
+                    ctx.fillRect(x + (10 * scale), y + (8 * scale), scale, 5 * scale);
                     ctx.fillStyle = palette.H;
-                    ctx.fillRect(x + (7 * scale), y + (6 * scale), 3 * scale, scale);
+                    ctx.fillRect(x + (9 * scale), y + (7 * scale), 3 * scale, scale);
+                    ctx.fillStyle = palette.C;
+                    ctx.fillRect(x + (10 * scale), y + (6 * scale), scale, scale);
                 } else if (sprite.role === "Rogue") {
                     ctx.fillStyle = palette.G;
-                    ctx.fillRect(x + scale, y + (7 * scale), scale, 4 * scale);
+                    ctx.fillRect(x + scale, y + (8 * scale), scale, 4 * scale);
                     ctx.fillStyle = palette.H;
-                    ctx.fillRect(x + (7 * scale), y + (3 * scale), scale, 5 * scale);
+                    ctx.fillRect(x + (7 * scale), y + (3 * scale), 2 * scale, 6 * scale);
+                    ctx.fillStyle = palette.C;
+                    ctx.fillRect(x + (3 * scale), y + (4 * scale), 2 * scale, scale);
                 }
             }
 

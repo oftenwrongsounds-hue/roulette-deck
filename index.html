@@ -36,6 +36,7 @@
         html,
         body {
             margin: 0;
+            height: 100%;
             min-height: 100%;
             background:
                 radial-gradient(circle at top, rgba(255, 0, 127, 0.18), transparent 26%),
@@ -43,7 +44,8 @@
                 linear-gradient(180deg, #120727 0%, #06020e 100%);
             color: var(--ink);
             font-family: "Courier New", Courier, monospace;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         body::before {
@@ -72,7 +74,8 @@
         .app-shell {
             position: relative;
             z-index: 1;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100svh;
             display: grid;
             grid-template-rows: auto 1fr auto;
             gap: 12px;
@@ -153,12 +156,14 @@
             min-height: 0;
             display: grid;
             grid-template-columns: 1.4fr 0.9fr;
+            align-items: stretch;
             gap: 12px;
         }
 
         .viewport {
             position: relative;
             overflow: hidden;
+            min-height: 420px;
             background:
                 radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.04), transparent 30%),
                 linear-gradient(180deg, rgba(18, 8, 42, 0.94), rgba(4, 1, 10, 0.98));
@@ -202,6 +207,7 @@
             grid-template-rows: auto auto auto 1fr;
             gap: 10px;
             padding: 10px;
+            overflow: auto;
             background:
                 linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03)),
                 rgba(10, 4, 24, 0.92);
@@ -400,17 +406,43 @@
         }
 
         @media (max-width: 860px) {
+            .app-shell {
+                grid-template-rows: auto auto 1fr;
+            }
+
             .main-grid {
                 grid-template-columns: 1fr;
+                grid-template-rows: minmax(46vh, 56vh) auto;
             }
 
             .hud {
                 grid-template-columns: 1fr;
             }
 
+            .viewport {
+                min-height: 46vh;
+            }
+
+            .terminal {
+                overflow: visible;
+            }
+
             .stats-grid,
             .button-row {
                 grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .stats-grid,
+            .button-row,
+            .task-add {
+                grid-template-columns: 1fr;
+            }
+
+            .overlay-readout {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -651,7 +683,6 @@
                 ui.stagnationReadout.textContent = stagnation < 1 ? "fresh input" : stagnation + "m stale";
                 ui.clockReadout.textContent = new Date().toLocaleTimeString();
                 ui.triageReadout.textContent = state.microStep;
-                ui.mindConsole.value = state.notes;
                 ui.installBanner.className = isStandalone ? "install-banner" : "install-banner visible";
 
                 if (state.currentOracleId) {
@@ -867,6 +898,10 @@
                     state.notes = ui.mindConsole.value;
                     saveState();
                 });
+            }
+
+            function refreshChrome() {
+                renderTelemetry();
             }
 
             function ensureAudio() {
@@ -1371,7 +1406,6 @@
 
                 updateWorld(dt);
                 renderWorld();
-                renderTelemetry();
                 window.requestAnimationFrame(loop);
             }
 
@@ -1381,7 +1415,9 @@
             if (!state.currentOracleId) {
                 pullOracle();
             }
+            ui.mindConsole.value = state.notes;
             renderAll();
+            window.setInterval(refreshChrome, 15000);
             window.requestAnimationFrame(loop);
         })();
     </script>

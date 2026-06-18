@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>The Roulette Deck</title>
+    <style>
+      :root {
+        --bg: #020402;
+        --panel: #081108;
+        --card: #0d170d;
+        --line: #39ff14;
+        --line-dim: rgba(57, 255, 20, 0.38);
+        --text: #d6ffd0;
+        --warning: #ff4655;
+        --amber: #ffcf33;
+        --cyan: #5ffbff;
+        --shadow: 0 0 0 2px var(--line), 0 0 22px rgba(57, 255, 20, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top, rgba(57, 255, 20, 0.14), transparent 32%),
+          linear-gradient(180deg, #030503 0%, #020402 100%);
+        color: var(--text);
+        font-family: "Courier New", Courier, monospace;
+        overscroll-behavior: none;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          repeating-linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.04) 0 2px,
+            rgba(0, 0, 0, 0.02) 2px 4px
+          );
+        mix-blend-mode: screen;
+        opacity: 0.18;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.9);
+      }
+
+      .app {
+        width: min(100%, 860px);
+        margin: 0 auto;
+        padding: calc(18px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      }
+
+      .topbar,
+      .stats,
+      .controls,
+      .dump-panel,
+      .help {
+        border: 2px solid var(--line);
+        background: rgba(3, 10, 3, 0.88);
+        box-shadow: var(--shadow);
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+
+      .brand {
+        font-size: clamp(1.4rem, 4vw, 2.25rem);
+        line-height: 1;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        text-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+      }
+
+      .sub {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: var(--line);
+        opacity: 0.9;
+      }
+
+      .status-chip {
+        align-self: start;
+        padding: 10px 12px;
+        border: 2px solid var(--amber);
+        color: var(--amber);
+        text-transform: uppercase;
+        font-size: 0.76rem;
+        line-height: 1.35;
+        background: rgba(255, 207, 51, 0.08);
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 2px;
+        padding: 2px;
+        margin-bottom: 14px;
+      }
+
+      .stat {
+        min-height: 74px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.28);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .label {
+        font-size: 0.68rem;
+        color: var(--line);
+        text-transform: uppercase;
+      }
+
+      .value {
+        font-size: clamp(1.1rem, 3vw, 1.8rem);
+        color: white;
+      }
+
+      .reel-wrap {
+        position: relative;
+        margin-bottom: 14px;
+      }
+
+      .card-stage {
+        position: relative;
+        min-height: 380px;
+        padding: 14px;
+        border: 2px solid var(--line);
+        background:
+          linear-gradient(180deg, rgba(57, 255, 20, 0.05), rgba(0, 0, 0, 0.22)),
+          var(--panel);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .card-stage.shake {
+        animation: shake 220ms linear;
+      }
+
+      .reel {
+        position: absolute;
+        inset: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        opacity: 0;
+        transform: scale(0.97);
+        transition: opacity 120ms ease;
+        pointer-events: none;
+      }
+
+      .reel.active {
+        opacity: 1;
+      }
+
+      .reel-item {
+        padding: 10px 12px;
+        border: 2px solid var(--line-dim);
+        color: rgba(214, 255, 208, 0.78);
+        background: rgba(0, 0, 0, 0.24);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .reel-item.center {
+        border-color: var(--amber);
+        color: var(--amber);
+        transform: scale(1.03);
+      }
+
+      .current-card {
+        position: relative;
+        z-index: 1;
+        min-height: 348px;
+        border: 2px solid var(--line);
+        background:
+          linear-gradient(135deg, rgba(95, 251, 255, 0.06), rgba(57, 255, 20, 0.04)),
+          var(--card);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        touch-action: none;
+        user-select: none;
+        transform: translate3d(0, 0, 0);
+      }
+
+      .current-card.swiping {
+        transition: none;
+      }
+
+      .card-badges {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .badge {
+        padding: 6px 8px;
+        border: 2px solid currentColor;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        background: rgba(0, 0, 0, 0.22);
+      }
+
+      .badge.type-user {
+        color: var(--cyan);
+      }
+
+      .badge.type-vibe {
+        color: var(--amber);
+      }
+
+      .badge.type-wild {
+        color: var(--warning);
+      }
+
+      .card-text {
+        margin: 20px 0;
+        font-size: clamp(1.4rem, 5vw, 2.65rem);
+        line-height: 1.15;
+        text-transform: uppercase;
+        word-break: break-word;
+        text-shadow: 0 0 16px rgba(57, 255, 20, 0.18);
+      }
+
+      .card-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.74rem;
+        color: var(--line);
+        text-transform: uppercase;
+      }
+
+      .swipe-hint {
+        margin-top: 14px;
+        font-size: 0.78rem;
+        color: rgba(214, 255, 208, 0.8);
+        text-transform: uppercase;
+      }
+
+      .controls {
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+
+      .button-row,
+      .action-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .button-row {
+        grid-template-columns: 1.5fr 1fr;
+        margin-bottom: 10px;
+      }
+
+      .action-row {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      button,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        min-height: 58px;
+        border: 2px solid var(--line);
+        background: #061106;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 12px;
+      }
+
+      button:active {
+        transform: translate(2px, 2px);
+      }
+
+      .spin-btn {
+        background: linear-gradient(180deg, rgba(57, 255, 20, 0.22), rgba(57, 255, 20, 0.08));
+        color: white;
+        font-size: 1.05rem;
+      }
+
+      .wild-btn {
+        border-color: var(--warning);
+        color: var(--warning);
+        background: rgba(255, 70, 85, 0.08);
+      }
+
+      .archive-btn {
+        border-color: var(--warning);
+        color: var(--warning);
+      }
+
+      .save-btn {
+        border-color: var(--cyan);
+        color: var(--cyan);
+      }
+
+      .lock-btn {
+        border-color: var(--amber);
+        color: var(--amber);
+      }
+
+      .dump-panel {
+        padding: 14px;
+        margin-bottom: 14px;
+      }
+
+      .section-title {
+        margin: 0 0 10px;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        color: white;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 118px;
+        resize: vertical;
+        background: #000;
+        color: var(--line);
+        border: 2px solid var(--line);
+        padding: 12px;
+      }
+
+      .dump-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .dump-actions button {
+        flex: 1;
+      }
+
+      .queue {
+        margin-top: 12px;
+        border-top: 2px solid var(--line-dim);
+        padding-top: 12px;
+        max-height: 168px;
+        overflow: auto;
+      }
+
+      .queue-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px dashed rgba(57, 255, 20, 0.24);
+        font-size: 0.82rem;
+      }
+
+      .help {
+        padding: 12px 14px;
+        font-size: 0.74rem;
+        line-height: 1.5;
+        color: rgba(214, 255, 208, 0.88);
+        text-transform: uppercase;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.74);
+        z-index: 20;
+      }
+
+      .overlay.active {
+        display: flex;
+      }
+
+      .overlay-card {
+        width: min(100%, 520px);
+        border: 3px solid var(--amber);
+        background: #090603;
+        color: var(--amber);
+        box-shadow: 0 0 0 3px rgba(255, 207, 51, 0.24), 0 0 40px rgba(255, 207, 51, 0.3);
+        padding: 22px;
+        text-align: center;
+        text-transform: uppercase;
+        animation: flicker 900ms linear infinite alternate;
+      }
+
+      .overlay-card h2 {
+        margin: 0 0 10px;
+        font-size: clamp(1.8rem, 6vw, 3.2rem);
+      }
+
+      .overlay-card p {
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .mini {
+        font-size: 0.72rem;
+        opacity: 0.9;
+      }
+
+      @keyframes shake {
+        0% { transform: translateX(0); }
+        20% { transform: translateX(-8px); }
+        40% { transform: translateX(7px); }
+        60% { transform: translateX(-6px); }
+        80% { transform: translateX(5px); }
+        100% { transform: translateX(0); }
+      }
+
+      @keyframes flicker {
+        0% { opacity: 0.92; }
+        100% { opacity: 1; }
+      }
+
+      @media (max-width: 720px) {
+        .stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .button-row,
+        .action-row {
+          grid-template-columns: 1fr;
+        }
+
+        .current-card {
+          min-height: 320px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <section class="topbar">
+        <div>
+          <div class="brand">The Roulette Deck</div>
+          <div class="sub">Brutalist arcade sorter for chaos, vibes, and one-hour lock-ins.</div>
+        </div>
+        <div id="lockStatus" class="status-chip">Free Play</div>
+      </section>
+
+      <section class="stats">
+        <div class="stat">
+          <div class="label">Active Deck</div>
+          <div id="deckCount" class="value">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Streak</div>
+          <div id="streakCount" class="value">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Locked</div>
+          <div id="lockedTimer" class="value">None</div>
+        </div>
+        <div class="stat">
+          <div class="label">Saved Later</div>
+          <div id="savedCount" class="value">0</div>
+        </div>
+      </section>
+
+      <section class="reel-wrap">
+        <div id="cardStage" class="card-stage">
+          <div id="reel" class="reel" aria-hidden="true"></div>
+          <article id="currentCard" class="current-card">
+            <div class="card-badges">
+              <div id="cardType" class="badge type-vibe">Standby</div>
+              <div id="cardMood" class="badge">No spin yet</div>
+            </div>
+            <div id="cardText" class="card-text">Hit spin and let the machine decide your next move.</div>
+            <div class="card-meta">
+              <span id="cardMetaLeft">Swipe left archive</span>
+              <span id="cardMetaRight">Right save / Down lock in</span>
+            </div>
+            <div class="swipe-hint">Touch card and throw it: left archive, right save, down lock in.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="button-row">
+          <button id="spinBtn" class="spin-btn">Spin The Deck</button>
+          <button id="wildBtn" class="wild-btn">F* It</button>
+        </div>
+        <div class="action-row">
+          <button id="archiveBtn" class="archive-btn">Archive Left</button>
+          <button id="saveBtn" class="save-btn">Save Right</button>
+          <button id="lockBtn" class="lock-btn">Lock In Down</button>
+        </div>
+      </section>
+
+      <section class="dump-panel">
+        <h2 class="section-title">Dump Terminal</h2>
+        <textarea
+          id="dumpInput"
+          placeholder="Blind-type here. One thought per line. Nothing is too dumb, too angry, too broke, or too weird."
+        ></textarea>
+        <div class="dump-actions">
+          <button id="addDumpBtn">Add To Deck</button>
+          <button id="clearLockedBtn" class="wild-btn">Emergency Unlock</button>
+        </div>
+        <div class="queue">
+          <div id="queueList"></div>
+        </div>
+      </section>
+
+      <section class="help">
+        Spin pulls from your live chaos inbox plus built-in daily vibes. Wildcard tries a random Wikipedia rabbit hole, then falls back to harsh local prompts if the network says no.
+      </section>
+    </div>
+
+    <div id="victoryOverlay" class="overlay">
+      <div class="overlay-card">
+        <h2>Deck Cleared</h2>
+        <p>You wiped the active stack. Stare at the void for a second, then refill the machine.</p>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "roulette-deck-state-v1";
+      const LOCK_DURATION_MS = 60 * 60 * 1000;
+      const builtinVibes = [
+        "Drink cold water and stand outside for 90 seconds.",
+        "Answer one message you have been dodging.",
+        "Put on one song and clean exactly one surface.",
+        "Open the notes app and write the real problem in one sentence.",
+        "Do ten slow shoulder rolls and reset your posture.",
+        "Check your bank app without spiraling.",
+        "Make one tiny money move.",
+        "Spend eight minutes on the ugliest task first.",
+        "Close every tab except the one that matters.",
+        "Take a 12-minute walk with no headphones.",
+        "Look up one thing that helps future-you.",
+        "Set a timer for one focused sprint and nothing else.",
+        "Eat something with protein before making big opinions.",
+        "Organize one pile, not your whole life.",
+        "Make one rough plan for tonight.",
+        "Text one person back with a blunt honest answer."
+      ];
+
+      const harshFallbacks = [
+        "Close your computer for exactly 12 minutes.",
+        "Put your phone in another room and breathe like you mean it.",
+        "Delete three tabs and pick one task.",
+        "Stand up now. No negotiation.",
+        "Go wash one dish and come back meaner.",
+        "No music. No scrolling. Two minutes of silence.",
+        "Write down what is actually bothering you."
+      ];
+
+      const els = {
+        deckCount: document.getElementById("deckCount"),
+        streakCount: document.getElementById("streakCount"),
+        lockedTimer: document.getElementById("lockedTimer"),
+        savedCount: document.getElementById("savedCount"),
+        lockStatus: document.getElementById("lockStatus"),
+        cardStage: document.getElementById("cardStage"),
+        currentCard: document.getElementById("currentCard"),
+        cardType: document.getElementById("cardType"),
+        cardMood: document.getElementById("cardMood"),
+        cardText: document.getElementById("cardText"),
+        cardMetaLeft: document.getElementById("cardMetaLeft"),
+        cardMetaRight: document.getElementById("cardMetaRight"),
+        reel: document.getElementById("reel"),
+        spinBtn: document.getElementById("spinBtn"),
+        wildBtn: document.getElementById("wildBtn"),
+        archiveBtn: document.getElementById("archiveBtn"),
+        saveBtn: document.getElementById("saveBtn"),
+        lockBtn: document.getElementById("lockBtn"),
+        dumpInput: document.getElementById("dumpInput"),
+        addDumpBtn: document.getElementById("addDumpBtn"),
+        clearLockedBtn: document.getElementById("clearLockedBtn"),
+        queueList: document.getElementById("queueList"),
+        victoryOverlay: document.getElementById("victoryOverlay")
+      };
+
+      let state = loadState();
+      let currentCard = null;
+      let audioCtx = null;
+      let isSpinning = false;
+      let dragState = null;
+      let clockInterval = null;
+
+      function uid() {
+        return Math.random().toString(36).slice(2, 10);
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return {
+              entries: [],
+              streak: 0,
+              saved: [],
+              archived: [],
+              locked: null
+            };
+          }
+          return JSON.parse(raw);
+        } catch (error) {
+          return {
+            entries: [],
+            streak: 0,
+            saved: [],
+            archived: [],
+            locked: null
+          };
+        }
+      }
+
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function ensureAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      function chirp({ frequency = 440, duration = 0.06, type = "square", gain = 0.03 } = {}) {
+        try {
+          ensureAudio();
+          const osc = audioCtx.createOscillator();
+          const amp = audioCtx.createGain();
+          osc.type = type;
+          osc.frequency.value = frequency;
+          amp.gain.value = gain;
+          osc.connect(amp);
+          amp.connect(audioCtx.destination);
+          const now = audioCtx.currentTime;
+          amp.gain.setValueAtTime(gain, now);
+          amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (error) {
+          // Ignore audio failures on restrictive browsers.
+        }
+      }
+
+      function hitShake() {
+        els.cardStage.classList.remove("shake");
+        void els.cardStage.offsetWidth;
+        els.cardStage.classList.add("shake");
+      }
+
+      function activeDeck() {
+        return [
+          ...state.entries.filter((entry) => entry.status === "active"),
+          ...builtinVibes.map((text, index) => ({
+            id: "builtin-" + index,
+            text,
+            type: "vibe",
+            status: "active",
+            builtin: true
+          }))
+        ];
+      }
+
+      function formatTimeLeft(ms) {
+        if (ms <= 0) {
+          return "Done";
+        }
+        const total = Math.ceil(ms / 1000);
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+        if (hours > 0) {
+          return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        }
+        return `${minutes}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function getLockedActive() {
+        if (!state.locked) {
+          return null;
+        }
+        if (Date.now() >= state.locked.until) {
+          state.locked = null;
+          saveState();
+          return null;
+        }
+        return state.locked;
+      }
+
+      function updateStats() {
+        const activeCount = state.entries.filter((entry) => entry.status === "active").length + builtinVibes.length;
+        const locked = getLockedActive();
+        els.deckCount.textContent = String(activeCount);
+        els.streakCount.textContent = String(state.streak || 0);
+        els.savedCount.textContent = String((state.saved || []).length);
+        if (locked) {
+          els.lockStatus.textContent = "Locked In";
+          els.lockStatus.style.borderColor = "var(--amber)";
+          els.lockStatus.style.color = "var(--amber)";
+          els.lockedTimer.textContent = formatTimeLeft(locked.until - Date.now());
+        } else {
+          els.lockStatus.textContent = "Free Play";
+          els.lockStatus.style.borderColor = "var(--line)";
+          els.lockStatus.style.color = "var(--line)";
+          els.lockedTimer.textContent = "None";
+        }
+      }
+
+      function renderQueue() {
+        const activeEntries = state.entries.filter((entry) => entry.status === "active").slice(0, 10);
+        if (!activeEntries.length) {
+          els.queueList.innerHTML = '<div class="queue-item"><span>No user chaos loaded.</span><span>Type some.</span></div>';
+          return;
+        }
+        els.queueList.innerHTML = activeEntries
+          .map((entry) => {
+            return `<div class="queue-item"><span>${escapeHtml(entry.text)}</span><span>${entry.type.toUpperCase()}</span></div>`;
+          })
+          .join("");
+      }
+
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function renderCard(card) {
+        const locked = getLockedActive();
+        currentCard = card || null;
+
+        if (locked) {
+          els.cardType.className = "badge";
+          els.cardType.style.color = "var(--amber)";
+          els.cardText.textContent = locked.text;
+          els.cardMood.textContent = "Locked";
+          els.cardMetaLeft.textContent = "No backing out";
+          els.cardMetaRight.textContent = formatTimeLeft(locked.until - Date.now());
+          resetCardPosition();
+          updateStats();
+          return;
+        }
+
+        if (!card) {
+          els.cardType.className = "badge type-vibe";
+          els.cardType.style.color = "";
+          els.cardType.textContent = "Standby";
+          els.cardMood.textContent = "Waiting";
+          els.cardText.textContent = "Hit spin and let the machine decide your next move.";
+          els.cardMetaLeft.textContent = "Swipe left archive";
+          els.cardMetaRight.textContent = "Right save / Down lock in";
+          resetCardPosition();
+          return;
+        }
+
+        const classMap = {
+          user: "badge type-user",
+          vibe: "badge type-vibe",
+          wildcard: "badge type-wild"
+        };
+
+        els.cardType.className = classMap[card.type] || "badge type-vibe";
+        els.cardType.style.color = "";
+        els.cardType.textContent = card.type === "user" ? "Chaos Inbox" : card.type === "wildcard" ? "Wildcard" : "Daily Vibe";
+        els.cardMood.textContent = card.mood || "Live";
+        els.cardText.textContent = card.text;
+        els.cardMetaLeft.textContent = card.type === "wildcard" ? "Chaotic external pull" : "Deck candidate";
+        els.cardMetaRight.textContent = card.source || "Swipe to decide";
+        resetCardPosition();
+      }
+
+      function resetCardPosition() {
+        els.currentCard.classList.remove("swiping");
+        els.currentCard.style.transform = "translate3d(0,0,0) rotate(0deg)";
+        els.currentCard.style.opacity = "1";
+      }
+
+      function updateVictoryOverlay() {
+        const userActive = state.entries.filter((entry) => entry.status === "active").length;
+        const savedPool = (state.saved || []).length;
+        if (userActive === 0 && savedPool === 0) {
+          els.victoryOverlay.classList.add("active");
+        } else {
+          els.victoryOverlay.classList.remove("active");
+        }
+      }
+
+      function addDumpEntries() {
+        const lines = els.dumpInput.value
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        if (!lines.length) {
+          chirp({ frequency: 160, duration: 0.12, gain: 0.04 });
+          return;
+        }
+
+        for (const line of lines) {
+          state.entries.unshift({
+            id: uid(),
+            text: line,
+            type: "user",
+            status: "active",
+            createdAt: Date.now()
+          });
+        }
+
+        state.streak = 0;
+        els.dumpInput.value = "";
+        saveState();
+        renderAll();
+        chirp({ frequency: 660, duration: 0.1, gain: 0.05 });
+      }
+
+      function pickRandomCard() {
+        const deck = activeDeck();
+        if (!deck.length) {
+          return null;
+        }
+        return deck[Math.floor(Math.random() * deck.length)];
+      }
+
+      function sampleReelItems() {
+        const deck = activeDeck();
+        if (!deck.length) {
+          return ["No cards", "Load chaos", "And spin"];
+        }
+        return Array.from({ length: 7 }, () => deck[Math.floor(Math.random() * deck.length)].text);
+      }
+
+      async function spinDeck() {
+        if (isSpinning || getLockedActive()) {
+          chirp({ frequency: 180, duration: 0.08 });
+          return;
+        }
+
+        isSpinning = true;
+        els.reel.classList.add("active");
+        els.spinBtn.disabled = true;
+        els.wildBtn.disabled = true;
+
+        for (let i = 0; i < 14; i += 1) {
+          const items = sampleReelItems();
+          els.reel.innerHTML = items
+            .map((item, index) => `<div class="reel-item ${index === 3 ? "center" : ""}">${escapeHtml(item)}</div>`)
+            .join("");
+          chirp({ frequency: 250 + i * 22, duration: 0.04, gain: 0.025 });
+          await wait(70 + i * 10);
+        }
+
+        const card = pickRandomCard();
+        els.reel.classList.remove("active");
+        renderCard(card);
+        hitShake();
+        chirp({ frequency: 930, duration: 0.12, gain: 0.05 });
+        isSpinning = false;
+        els.spinBtn.disabled = false;
+        els.wildBtn.disabled = false;
+      }
+
+      async function fetchWildcard() {
+        if (isSpinning || getLockedActive()) {
+          chirp({ frequency: 180, duration: 0.08 });
+          return;
+        }
+
+        isSpinning = true;
+        els.wildBtn.disabled = true;
+        els.spinBtn.disabled = true;
+        els.reel.classList.add("active");
+
+        for (let i = 0; i < 10; i += 1) {
+          const picks = harshFallbacks.sort(() => Math.random() - 0.5).slice(0, 7);
+          els.reel.innerHTML = picks
+            .map((item, index) => `<div class="reel-item ${index === 3 ? "center" : ""}">${escapeHtml(item)}</div>`)
+            .join("");
+          chirp({ frequency: 420 + i * 16, duration: 0.035, type: "sawtooth", gain: 0.03 });
+          await wait(60 + i * 8);
+        }
+
+        let card = null;
+        try {
+          const response = await fetch("https://en.wikipedia.org/api/rest_v1/page/random/summary", {
+            headers: {
+              Accept: "application/json"
+            }
+          });
+          if (!response.ok) {
+            throw new Error("Wikipedia refused");
+          }
+          const data = await response.json();
+          card = {
+            id: uid(),
+            text: `${data.title}: ${data.extract ? data.extract.slice(0, 160) : "Go read the weird thing."}`,
+            type: "wildcard",
+            mood: "Rabbit Hole",
+            source: "Wikipedia Random"
+          };
+        } catch (error) {
+          card = {
+            id: uid(),
+            text: harshFallbacks[Math.floor(Math.random() * harshFallbacks.length)],
+            type: "wildcard",
+            mood: "Fallback Chaos",
+            source: "Offline Wildcard"
+          };
+        }
+
+        els.reel.classList.remove("active");
+        renderCard(card);
+        hitShake();
+        chirp({ frequency: 1180, duration: 0.14, type: "triangle", gain: 0.045 });
+        isSpinning = false;
+        els.wildBtn.disabled = false;
+        els.spinBtn.disabled = false;
+      }
+
+      function resolveAction(action) {
+        if (!currentCard || getLockedActive() || isSpinning) {
+          chirp({ frequency: 180, duration: 0.08 });
+          return;
+        }
+
+        const isBuiltin = currentCard.builtin;
+        const target = state.entries.find((entry) => entry.id === currentCard.id);
+
+        if (action === "archive") {
+          if (target) {
+            target.status = "archived";
+            state.archived.unshift({ ...target, archivedAt: Date.now() });
+          }
+          state.streak = (state.streak || 0) + 1;
+          chirp({ frequency: 180, duration: 0.12, type: "square", gain: 0.04 });
+        }
+
+        if (action === "save") {
+          state.saved.unshift({
+            id: currentCard.id,
+            text: currentCard.text,
+            type: currentCard.type,
+            savedAt: Date.now()
+          });
+          if (target) {
+            target.status = "saved";
+          }
+          state.streak = (state.streak || 0) + 1;
+          chirp({ frequency: 760, duration: 0.1, type: "triangle", gain: 0.04 });
+        }
+
+        if (action === "lock") {
+          state.locked = {
+            id: currentCard.id,
+            text: currentCard.text,
+            type: currentCard.type,
+            until: Date.now() + LOCK_DURATION_MS
+          };
+          if (target && !isBuiltin) {
+            target.status = "locked";
+          }
+          state.streak = 0;
+          chirp({ frequency: 980, duration: 0.22, type: "sawtooth", gain: 0.05 });
+        }
+
+        if (action !== "lock") {
+          currentCard = null;
+        }
+
+        saveState();
+        renderAll();
+        if (action !== "lock") {
+          renderCard(null);
+        }
+      }
+
+      function emergencyUnlock() {
+        state.locked = null;
+        saveState();
+        renderAll();
+        chirp({ frequency: 300, duration: 0.1, gain: 0.04 });
+      }
+
+      function renderAll() {
+        updateStats();
+        renderQueue();
+        updateVictoryOverlay();
+        const locked = getLockedActive();
+        if (locked) {
+          renderCard({
+            id: locked.id,
+            text: locked.text,
+            type: locked.type,
+            mood: "Locked"
+          });
+        } else if (currentCard && currentCard.type !== "wildcard") {
+          const stillExists =
+            currentCard.builtin ||
+            state.entries.some((entry) => entry.id === currentCard.id && entry.status === "active");
+          if (!stillExists) {
+            renderCard(null);
+          }
+        }
+      }
+
+      function wait(ms) {
+        return new Promise((resolve) => window.setTimeout(resolve, ms));
+      }
+
+      function startClock() {
+        if (clockInterval) {
+          window.clearInterval(clockInterval);
+        }
+        clockInterval = window.setInterval(() => {
+          const locked = getLockedActive();
+          if (!locked) {
+            updateStats();
+            return;
+          }
+          updateStats();
+          renderCard({
+            id: locked.id,
+            text: locked.text,
+            type: locked.type,
+            mood: "Locked"
+          });
+        }, 1000);
+      }
+
+      function attachSwipe() {
+        els.currentCard.addEventListener("pointerdown", (event) => {
+          if (!currentCard || getLockedActive() || isSpinning) {
+            return;
+          }
+          dragState = {
+            startX: event.clientX,
+            startY: event.clientY
+          };
+          els.currentCard.classList.add("swiping");
+          els.currentCard.setPointerCapture(event.pointerId);
+        });
+
+        els.currentCard.addEventListener("pointermove", (event) => {
+          if (!dragState) {
+            return;
+          }
+          const dx = event.clientX - dragState.startX;
+          const dy = event.clientY - dragState.startY;
+          els.currentCard.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${dx / 18}deg)`;
+          els.currentCard.style.opacity = String(Math.max(0.45, 1 - Math.abs(dx + dy) / 420));
+        });
+
+        function finishSwipe(event) {
+          if (!dragState) {
+            return;
+          }
+          const dx = event.clientX - dragState.startX;
+          const dy = event.clientY - dragState.startY;
+          dragState = null;
+          els.currentCard.releasePointerCapture(event.pointerId);
+
+          if (dx < -110 && Math.abs(dx) > Math.abs(dy)) {
+            resolveAction("archive");
+            return;
+          }
+          if (dx > 110 && Math.abs(dx) > Math.abs(dy)) {
+            resolveAction("save");
+            return;
+          }
+          if (dy > 120 && Math.abs(dy) > Math.abs(dx)) {
+            resolveAction("lock");
+            return;
+          }
+          resetCardPosition();
+        }
+
+        els.currentCard.addEventListener("pointerup", finishSwipe);
+        els.currentCard.addEventListener("pointercancel", () => {
+          dragState = null;
+          resetCardPosition();
+        });
+      }
+
+      els.spinBtn.addEventListener("click", spinDeck);
+      els.wildBtn.addEventListener("click", fetchWildcard);
+      els.archiveBtn.addEventListener("click", () => resolveAction("archive"));
+      els.saveBtn.addEventListener("click", () => resolveAction("save"));
+      els.lockBtn.addEventListener("click", () => resolveAction("lock"));
+      els.addDumpBtn.addEventListener("click", addDumpEntries);
+      els.clearLockedBtn.addEventListener("click", emergencyUnlock);
+      els.victoryOverlay.addEventListener("click", () => els.victoryOverlay.classList.remove("active"));
+
+      attachSwipe();
+      renderCard(null);
+      renderAll();
+      startClock();
+    </script>
+  </body>
+</html>
